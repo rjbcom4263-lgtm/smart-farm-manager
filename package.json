@@ -1,0 +1,23 @@
+{
+  "name": "smart-farm-manager",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "vite build",
+    "dev:cloud": "wrangler pages dev dist",
+    "prepare:cloud-data": "node scripts/make-d1-import.mjs",
+    "start": "node server.js --production",
+    "test": "node test/smoke.mjs && node test/rack-model.mjs"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0",
+    "wrangler": "^4.150.0"
+  }
+}

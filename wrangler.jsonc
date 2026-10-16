@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "smart-farm-greenlog",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-13",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "smart-farm-greenlog-db",
+      "database_id": "1a462e0d-9856-4667-b426-d0c23efd2d46"
+    }
+  ]
+}

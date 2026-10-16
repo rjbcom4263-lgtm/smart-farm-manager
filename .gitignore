@@ -1,0 +1,12 @@
+node_modules/
+dist/
+data/*.xlsx
+data/*.tmp.xlsx
+data/*.log
+data/backup-*
+data/cloudflare-import.sql
+data/cloudflare-admin-password.txt
+.dev.vars*
+.env*
+.wrangler/
+.DS_Store

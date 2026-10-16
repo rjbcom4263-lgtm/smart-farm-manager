@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS farm_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  version INTEGER NOT NULL DEFAULT 0,
+  data TEXT NOT NULL
+);
