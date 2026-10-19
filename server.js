@@ -1,3 +1,4 @@
+import { readSensors } from './cloud/sensors.js';
 import express from 'express';
 import ExcelJS from 'exceljs';
 import { randomUUID } from 'node:crypto';
@@ -231,6 +232,10 @@ function nextDay(date, interval) {
   value.setUTCDate(value.getUTCDate() + interval);
   return value.toISOString().slice(0, 10);
 }
+
+app.get('/api/sensors', async (req, res) => {
+  res.set('Cache-Control', 'no-store').json(await readSensors(process.env.SMART_FARM_SENSOR_URL || 'http://127.0.0.1:8091/api/latest'));
+});
 
 app.get('/api/state', async (req, res, next) => {
   try { res.json(snapshot(await loadBook())); } catch (error) { next(error); }
