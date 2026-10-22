@@ -1,3 +1,4 @@
+import { readSensors } from '../../cloud/sensors.js';
 import { initialState, snapshot, mutateState } from '../../cloud/state.js';
 
 function json(value, status = 200) {
@@ -14,6 +15,9 @@ async function loadRow(db) {
 }
 
 export async function onRequest({ request, env }) {
+  if (request.method === 'GET' && new URL(request.url).pathname === '/api/sensors') {
+    return json(env.SENSOR_UPSTREAM_URL ? await readSensors(env.SENSOR_UPSTREAM_URL) : { available: false, devices: [], message: '온라인 센서 연결이 아직 설정되지 않았습니다. 수신 PC에서 실행한 웹에서는 현재값을 확인할 수 있습니다.' });
+  }
   if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
   const route = new URL(request.url).pathname.split('/').filter(Boolean).slice(1);
   try {

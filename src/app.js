@@ -1,3 +1,4 @@
+import { sensorPanel, startSensorUpdates } from './sensors.js';
 import { stages, tierCountFor } from '../cultivation/stages.js';
 
 const app = document.querySelector('#app');
@@ -171,7 +172,7 @@ function dashboard() {
   const monthlySowings = db.sowings.filter(inMonth);
   const monthlySales = db.sales.filter(inMonth);
   const latestClimate = sortRecent(db.climate)[0];
-  return `<div class="content">${pageHead('OVERVIEW', '안녕하세요, 오늘의 온실', '일정과 재배 현황을 한눈에 확인하세요.', `<button class="btn" data-modal="harvest">+ 수확 기록</button><button class="btn primary" data-modal="task">+ 작업 등록</button>`)}<div class="metrics">${metric('이번 달 수확량', `${kg(total(monthlyHarvests, 'weightKg'))}`, `상자 ${number(total(monthlyHarvests, 'boxes'))}개`, '↗')}${metric('이번 달 판매량', `${kg(total(monthlySales, 'weightKg'))}`, `상자 ${number(total(monthlySales, 'boxes'))}개`, '◈')}${metric('이번 달 파기량', `${kg(total(monthlyHarvests, 'cullWeightKg'))}`, `상자 ${number(total(monthlyHarvests, 'cullBoxes'))}개`, '↘')}${metric('이번 달 파종', `${number(total(monthlySowings, 'trays'))}<small>판</small>`, `${number(total(monthlySowings, 'seedCount'))}립 사용`, '✳')}</div><div class="dashboard-grid">${calendar()}<div class="right-stack">${todayPanel()}${alerts()}</div></div><div class="lower-grid">${stockPanel()}<div class="right-stack">${`<section class="panel"><div class="panel-head"><div><h2 class="panel-title">최근 온실 환경</h2><div class="panel-sub">날짜별 온도·습도 입력 기록</div></div><button class="btn tiny" data-modal="climate">+ 입력</button></div><div class="record-list">${latestClimate ? `<div class="mini-record"><span><strong>${escapeHtml(latestClimate.temperature)}°C</strong><small>온도</small></span><span class="value">습도 ${escapeHtml(latestClimate.humidity)}%<br><small>${shortDate(latestClimate.date)} 기록</small></span></div>` : `<div class="empty">아직 기록이 없습니다.</div>`}</div></section>`}${recentPanel()}</div></div></div>`;
+  return `<div class="content">${pageHead('OVERVIEW', '안녕하세요, 오늘의 온실', '일정과 재배 현황을 한눈에 확인하세요.', `<button class="btn" data-modal="harvest">+ 수확 기록</button><button class="btn primary" data-modal="task">+ 작업 등록</button>`)}<div id="sensor-monitor">${sensorPanel()}</div><div class="metrics">${metric('이번 달 수확량', `${kg(total(monthlyHarvests, 'weightKg'))}`, `상자 ${number(total(monthlyHarvests, 'boxes'))}개`, '↗')}${metric('이번 달 판매량', `${kg(total(monthlySales, 'weightKg'))}`, `상자 ${number(total(monthlySales, 'boxes'))}개`, '◈')}${metric('이번 달 파기량', `${kg(total(monthlyHarvests, 'cullWeightKg'))}`, `상자 ${number(total(monthlyHarvests, 'cullBoxes'))}개`, '↘')}${metric('이번 달 파종', `${number(total(monthlySowings, 'trays'))}<small>판</small>`, `${number(total(monthlySowings, 'seedCount'))}립 사용`, '✳')}</div><div class="dashboard-grid">${calendar()}<div class="right-stack">${todayPanel()}${alerts()}</div></div><div class="lower-grid">${stockPanel()}<div class="right-stack">${`<section class="panel"><div class="panel-head"><div><h2 class="panel-title">최근 온실 환경</h2><div class="panel-sub">날짜별 온도·습도 입력 기록</div></div><button class="btn tiny" data-modal="climate">+ 입력</button></div><div class="record-list">${latestClimate ? `<div class="mini-record"><span><strong>${escapeHtml(latestClimate.temperature)}°C</strong><small>온도</small></span><span class="value">습도 ${escapeHtml(latestClimate.humidity)}%<br><small>${shortDate(latestClimate.date)} 기록</small></span></div>` : `<div class="empty">아직 기록이 없습니다.</div>`}</div></section>`}${recentPanel()}</div></div></div>`;
 }
 
 function table(headers, items, makeRow) {
@@ -444,3 +445,5 @@ document.addEventListener('change', event => {
 document.addEventListener('keydown', event => { if (event.key === 'Escape') modalRoot.innerHTML = ''; });
 
 refresh().catch(error => { app.innerHTML = `<div class="loading">기록을 불러오지 못했습니다.<br>${escapeHtml(error.message)}</div>`; });
+
+startSensorUpdates();

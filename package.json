@@ -9,7 +9,7 @@
     "dev:cloud": "wrangler pages dev dist",
     "prepare:cloud-data": "node scripts/make-d1-import.mjs",
     "start": "node server.js --production",
-    "test": "node test/smoke.mjs && node test/rack-model.mjs"
+    "test": "node test/sensors.mjs && node test/smoke.mjs && node test/rack-model.mjs"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
