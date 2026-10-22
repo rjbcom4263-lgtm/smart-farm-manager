@@ -6,6 +6,7 @@ import { rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { initialArchive, archiveValues } from './archive/defaults.js';
+import { journalValues } from './journal/values.js';
 import { defaultTierCount, stages, stageDays, initialRackTiers, rackTierValues, tierCountFor } from './cultivation/stages.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,7 @@ const schemas = {
   stageSettings: { sheet: '재배단계', columns: ['rackType', 'days'] },
   rackTiers: { sheet: '재배대단', columns: ['id', 'bedId', 'tier', 'slotCount'] },
   archive: { sheet: '아카이브', columns: ['id', 'category', 'title', 'content'] },
+  journal: { sheet: '업무일지', columns: ['id', 'date', 'title', 'content'] },
 };
 
 const initialVarieties = ['프릴아이스', '이자벨', '로메인', '버터헤드', '알사시아', '오비레드'];
@@ -167,6 +169,10 @@ async function loadBook() {
     if (!sheet(book, 'archive')) {
       book.addWorksheet(schemas.archive.sheet).addRow(schemas.archive.columns);
       for (const item of initialArchive) add(book, 'archive', item);
+      migrated = true;
+    }
+    if (!sheet(book, 'journal')) {
+      book.addWorksheet(schemas.journal.sheet).addRow(schemas.journal.columns);
       migrated = true;
     }
     if (!sheet(book, 'stageSettings')) {
@@ -350,6 +356,22 @@ post('co2', (book, body) => {
 
 post('archive', (book, body) => add(book, 'archive', archiveValues(body)));
 
+post('journal', (book, body) => add(book, 'journal', journalValues(body)));
+
+app.patch('/api/journal/:id', async (req, res, next) => {
+  try {
+    res.json(await mutate(book => {
+      const row = locate(book, 'journal', req.params.id);
+      if (!row) throw new Error('업무 일지를 찾지 못했습니다.');
+      const values = journalValues(req.body ?? {});
+      row.getCell(2).value = values.date;
+      row.getCell(3).value = values.title;
+      row.getCell(4).value = values.content;
+      return { id: req.params.id, ...values };
+    }));
+  } catch (error) { next(error); }
+});
+
 app.patch('/api/archive/:id', async (req, res, next) => {
   try {
     res.json(await mutate(book => {
@@ -406,7 +428,7 @@ post('rack-tiers', (book, body) => {
 
 app.delete('/api/:type/:id', async (req, res, next) => {
   try {
-    const allowed = ['varieties', 'plans', 'harvests', 'sales', 'climate', 'nutrients', 'co2', 'sowings', 'tasks', 'archive'];
+    const allowed = ['varieties', 'plans', 'harvests', 'sales', 'climate', 'nutrients', 'co2', 'sowings', 'tasks', 'archive', 'journal'];
     if (!allowed.includes(req.params.type)) throw new Error('삭제할 수 없는 기록입니다.');
     res.json(await mutate(book => {
       if (req.params.type === 'varieties') {

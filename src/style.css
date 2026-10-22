@@ -187,6 +187,12 @@ a{text-decoration:none;color:inherit}
 .archive-category{display:inline-block;background:#e9f3e7;color:#4b7852;border-radius:5px;padding:4px 7px;font-size:10px;font-weight:800}
 .archive-actions{display:flex;gap:7px}
 .archive-body{white-space:pre-wrap;font-size:12px;line-height:1.8;color:#526854;margin-top:20px}
+.journal-list{display:grid;gap:13px;max-width:900px}
+.journal-entry{padding:20px 22px}
+.journal-entry-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.journal-entry time{font-size:10px;font-weight:800;color:#67916f}
+.journal-entry h2{font-size:17px;color:#2b4631;margin:5px 0 0}
+.journal-content{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.8;color:#526854;margin-top:16px}
 .modal-backdrop{position:fixed;inset:0;background:#16261bb3;z-index:10;display:grid;place-items:center;padding:20px}
 .modal{background:#fff;border-radius:17px;width:min(470px,100%);max-height:90vh;overflow:auto;box-shadow:0 25px 70px #0b201435}
 .modal-head{display:flex;justify-content:space-between;align-items:center;padding:21px 23px;border-bottom:1px solid #edf1eb}

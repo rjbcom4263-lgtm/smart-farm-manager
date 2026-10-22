@@ -1,7 +1,8 @@
 import { initialArchive, archiveValues } from '../archive/defaults.js';
+import { journalValues } from '../journal/values.js';
 import { defaultTierCount, stages, stageDays, initialRackTiers, rackTierValues, tierCountFor } from '../cultivation/stages.js';
 
-const types = ['varieties', 'stock', 'sowings', 'plans', 'tasks', 'taskHistory', 'harvests', 'sales', 'climate', 'nutrients', 'co2', 'beds', 'archive', 'stageSettings', 'rackTiers'];
+const types = ['varieties', 'stock', 'sowings', 'plans', 'tasks', 'taskHistory', 'harvests', 'sales', 'climate', 'nutrients', 'co2', 'beds', 'archive', 'journal', 'stageSettings', 'rackTiers'];
 const initialVarieties = ['프릴아이스', '이자벨', '로메인', '버터헤드', '알사시아', '오비레드'];
 
 export function initialState() {
@@ -78,6 +79,7 @@ function stockFor(state, varietyId) {
 
 export function snapshot(state) {
   if (!Array.isArray(state.archive)) state.archive = initialArchive.map(item => ({ ...item }));
+  if (!Array.isArray(state.journal)) state.journal = [];
   if (!Array.isArray(state.stageSettings)) state.stageSettings = stages.map(({ rackType, days }) => ({ rackType, days }));
   if (!Array.isArray(state.rackTiers)) state.rackTiers = initialRackTiers(state.beds);
   return { ...state, beds: state.beds.map(bed => ({ ...bed, tierCount: tierCountFor(bed) })), varieties: state.varieties.map(item => ({ ...item, stock: stockFor(state, item.id) })) };
@@ -104,6 +106,7 @@ function harvestValues(state, body) {
 
 export function mutateState(state, method, route, body = {}) {
   if (!Array.isArray(state.archive)) state.archive = initialArchive.map(item => ({ ...item }));
+  if (!Array.isArray(state.journal)) state.journal = [];
   if (!Array.isArray(state.stageSettings)) state.stageSettings = stages.map(({ rackType, days }) => ({ rackType, days }));
   if (!Array.isArray(state.rackTiers)) state.rackTiers = initialRackTiers(state.beds);
   const [type, id, action] = route;
@@ -128,8 +131,14 @@ export function mutateState(state, method, route, body = {}) {
     Object.assign(record, archiveValues(body));
     return record;
   }
+  if (method === 'PATCH' && type === 'journal' && id && !action) {
+    const record = find(state, 'journal', id);
+    if (!record) throw new Error('업무 일지를 찾지 못했습니다.');
+    Object.assign(record, journalValues(body));
+    return record;
+  }
   if (method === 'DELETE' && id && !action) {
-    if (!['varieties', 'plans', 'harvests', 'sales', 'climate', 'nutrients', 'co2', 'sowings', 'tasks', 'archive'].includes(type)) throw new Error('삭제할 수 없는 기록입니다.');
+    if (!['varieties', 'plans', 'harvests', 'sales', 'climate', 'nutrients', 'co2', 'sowings', 'tasks', 'archive', 'journal'].includes(type)) throw new Error('삭제할 수 없는 기록입니다.');
     if (type === 'varieties') {
       if (!find(state, 'varieties', id)) throw new Error('품종을 찾지 못했습니다.');
       if (['stock', 'sowings', 'plans', 'harvests', 'sales', 'beds'].some(collection => state[collection].some(item => item.varietyId === id))) {
@@ -164,6 +173,8 @@ export function mutateState(state, method, route, body = {}) {
     }
     case 'archive':
       return add(state, type, archiveValues(body));
+    case 'journal':
+      return add(state, type, journalValues(body));
     case 'varieties': {
       const name = text(body.name, '품종 이름');
       if (state.varieties.some(item => item.name === name)) throw new Error('이미 등록된 품종입니다.');

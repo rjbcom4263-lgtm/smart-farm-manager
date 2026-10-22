@@ -237,13 +237,19 @@ function archivePage() {
   return `<div class="content">${pageHead('REFERENCE', '스마트팜 아카이브', '온실 운영에 필요한 기준과 절차를 기록해 두세요.', '<button class="btn primary" data-modal="archive">+ 자료 추가</button>')}<div class="archive-grid">${tiles}</div>${detail}</div>`;
 }
 
+function journalPage() {
+  const entries = sortRecent(db.journal || []);
+  const list = entries.length ? entries.map(item => `<article class="panel journal-entry"><div class="journal-entry-head"><div><time datetime="${escapeHtml(item.date)}">${escapeHtml(item.date)}</time><h2>${escapeHtml(item.title)}</h2></div><div class="archive-actions"><button class="btn tiny" data-edit-journal="${escapeHtml(item.id)}">수정</button><button class="btn tiny danger" data-delete="journal" data-id="${escapeHtml(item.id)}">삭제</button></div></div><div class="journal-content">${escapeHtml(item.content)}</div></article>`).join('') : '<div class="panel empty">아직 작성한 업무 일지가 없습니다. 오늘 한 일을 기록해 보세요.</div>';
+  return `<div class="content">${pageHead('WORK JOURNAL', '업무 일지', '날짜별로 실제 진행한 작업과 현장 메모를 남겨두세요.', '<button class="btn" data-export-excel>엑셀 내려받기</button><button class="btn primary" data-modal="journal">+ 일지 작성</button>')}<div class="journal-list">${list}</div></div>`;
+}
+
 function render() {
   const version = ++renderVersion;
   if (farmCleanup) { farmCleanup(); farmCleanup = null; }
   if (!db) return;
-  breadcrumb.textContent = page === 'dashboard' ? '대시보드' : page === 'records' ? '재배 기록' : page === 'greenhouse' ? '온실 배치도' : '스마트팜 아카이브';
+  breadcrumb.textContent = page === 'dashboard' ? '대시보드' : page === 'records' ? '재배 기록' : page === 'journal' ? '업무 일지' : page === 'greenhouse' ? '온실 배치도' : '스마트팜 아카이브';
   document.querySelectorAll('.main-nav button').forEach(button => button.classList.toggle('active', button.dataset.page === page));
-  app.innerHTML = page === 'dashboard' ? dashboard() : page === 'records' ? records() : page === 'greenhouse' ? greenhouse() : archivePage();
+  app.innerHTML = page === 'dashboard' ? dashboard() : page === 'records' ? records() : page === 'journal' ? journalPage() : page === 'greenhouse' ? greenhouse() : archivePage();
   if (page === 'records' && tab === 'harvest') {
     const records = sortRecent(db.harvests);
     app.querySelectorAll('.records-grid > .panel:first-child tbody tr').forEach((row, index) => {
@@ -291,6 +297,7 @@ function modalConfig(kind, presetDate) {
   const variety = () => selectField('품종', 'varietyId', varietyOptions());
   const memo = () => `<div class="field wide"><label for="f-memo">메모</label><input id="f-memo" name="memo" placeholder="필요할 때만 입력하세요"></div>`;
   switch (kind) {
+    case 'journal': return ['업무 일지 작성', `${dateField(date)}<div class="field wide">${field('제목', 'title', 'text', 'required maxlength="100" placeholder="예: 육묘대 점검"')}</div><div class="field wide"><label for="f-content">진행 내용</label><textarea id="f-content" name="content" rows="8" maxlength="5000" required placeholder="오늘 진행한 작업과 특이 사항을 적어 주세요"></textarea></div>`,'journal'];
     case 'archive': return ['아카이브 자료 추가', `${field('분류', 'category', 'text', 'required list="archive-categories" maxlength="50"')}<datalist id="archive-categories"><option value="양액 비율"><option value="필터 청소"></datalist>${field('제목', 'title', 'text', 'required maxlength="100"')}<div class="field wide"><label for="f-content">내용</label><textarea id="f-content" name="content" rows="12" maxlength="5000" placeholder="현장에서 확인한 내용을 입력하세요"></textarea></div>`,'archive'];
     case 'stock': return ['씨앗 입고 · 재고 조정', `${dateField(date)}${variety()}${selectField('입력 방식', 'kind', '<option value="purchase">구매 수량 더하기</option><option value="adjust">현재 재고로 수정</option>')}${numField('씨앗 수량(립)', 'quantity', { required: true })}${memo()}`,'stock'];
     case 'sowing': return ['파종 기록', `${dateField(date)}${variety()}${numField('육묘판 수', 'trays', { required: true })}<div class="field"><label>자동 계산</label><input disabled value="1판 = 300립"></div>${memo()}`,'sowings'];
@@ -374,6 +381,17 @@ document.addEventListener('click', async event => {
     form.dataset.method = 'PATCH';
     modalRoot.querySelector('#modal-title').textContent = '아카이브 자료 수정';
     for (const key of ['category', 'title', 'content']) form.elements.namedItem(key).value = item[key] || '';
+    return;
+  }
+  if (button.dataset.editJournal) {
+    const item = db.journal.find(record => record.id === button.dataset.editJournal);
+    if (!item) return;
+    openModal('journal', item.date);
+    const form = modalRoot.querySelector('form');
+    form.dataset.endpoint = `journal/${item.id}`;
+    form.dataset.method = 'PATCH';
+    modalRoot.querySelector('#modal-title').textContent = '업무 일지 수정';
+    for (const key of ['date', 'title', 'content']) form.elements.namedItem(key).value = item[key];
     return;
   }
   if (button.hasAttribute('data-close')) { modalRoot.innerHTML = ''; return; }

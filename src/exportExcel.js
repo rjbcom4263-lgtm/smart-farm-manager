@@ -16,6 +16,7 @@ const sheets = {
   stageSettings: ['재배단계', ['rackType', 'days']],
   rackTiers: ['재배대단', ['id', 'bedId', 'tier', 'slotCount']],
   archive: ['아카이브', ['id', 'category', 'title', 'content']],
+  journal: ['업무일지', ['id', 'date', 'title', 'content']],
 };
 
 export async function exportExcel(state) {

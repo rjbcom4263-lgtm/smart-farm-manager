@@ -85,6 +85,16 @@ try {
   assert.equal(state.rackTiers.length, 44 * 6);
   assert.equal(state.rackTiers[0].slotCount, '');
   assert.equal(state.archive.length, 2);
+  assert.deepEqual(state.journal, []);
+  const entry = await request('journal', { date: '2026-10-14', title: '육묘대 점검', content: '1층 점검\n이상 없음' });
+  await request(`journal/${entry.id}`, { date: '2026-10-15', title: '육묘대 점검', content: '2층도 점검' }, 'PATCH');
+  state = await request('state', undefined, 'GET');
+  assert.equal(state.journal.find(item => item.id === entry.id).content, '2층도 점검');
+  assert.equal(state.journal.find(item => item.id === entry.id).date, '2026-10-15');
+  const invalidJournal = await fetch(`${base}/journal`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: '2026-10-15', title: '빈 일지', content: '' }) });
+  assert.equal(invalidJournal.status, 400);
+  await request(`journal/${entry.id}`, undefined, 'DELETE');
+  assert.deepEqual((await request('state', undefined, 'GET')).journal, []);
   assert.equal(state.archive.find(item => item.id === 'nutrient-ratio').content, '');
   assert.match(state.archive.find(item => item.id === 'filter-cleaning').content, /리턴펌프/);
   const archiveEntry = await request('archive', { category: '설비', title: '확인 사항', content: '첫 기록' });
@@ -133,6 +143,15 @@ try {
   assert.deepEqual(cloudState.beds.filter(bed => bed.tierCount === 6).map(bed => `${bed.floor} ${bed.side}${bed.number}`), ['1층 L10', '1층 L11', '2층 L10', '2층 L11']);
   assert.deepEqual(cloudState.stageSettings.map(item => item.days), [7, 14, 24]);
   assert.equal(cloudState.rackTiers.length, 44 * 6);
+  assert.deepEqual(cloudState.journal, []);
+  const cloudJournal = mutateState(cloudState, 'POST', ['journal'], { date: '2026-10-14', title: '작업', content: '필터 확인' });
+  mutateState(cloudState, 'PATCH', ['journal', cloudJournal.id], { date: '2026-10-15', title: '작업', content: '필터 청소' });
+  assert.equal(cloudState.journal[0].content, '필터 청소');
+  assert.throws(() => mutateState(cloudState, 'POST', ['journal'], { date: '2026-10-15', title: '빈 일지', content: '' }), /제목과 내용/);
+  mutateState(cloudState, 'DELETE', ['journal', cloudJournal.id]);
+  assert.deepEqual(cloudState.journal, []);
+  delete cloudState.journal;
+  assert.deepEqual(snapshot(cloudState).journal, []);
   mutateState(cloudState, 'POST', ['rack-tiers'], { bedId: cloudState.beds[0].id, tier1: 4, tier2: '', tier3: '', tier4: '', tier5: '', tier6: '' });
   mutateState(cloudState, 'POST', ['beds'], { id: cloudState.beds[1].id, tierCount: 6 });
   assert.equal(cloudState.beds[1].tierCount, 6);
@@ -178,6 +197,7 @@ try {
   assert.equal(harvest.weightKg, '');
   await request(`harvests/${harvest.id}`, { date: '2026-10-03', bedKey: state.beds[0].id, varietyId, boxes: 3, weightKg: 12.5, cullBoxes: 1, cullWeightKg: 1.2 }, 'PATCH');
   await request(`sowings/${sowing.id}`, undefined, 'DELETE');
+  const savedJournal = await request('journal', { date: '2026-10-16', title: '현장 점검', content: '양액통 점검 완료' });
   state = await request('state', undefined, 'GET');
   assert.equal(state.varieties[0].stock, 3100);
 
@@ -187,6 +207,7 @@ try {
   assert.equal(state.varieties[0].stock, 3100);
   assert.equal(state.harvests.length, 1);
   assert.equal(state.harvests[0].weightKg, 12.5);
+  assert.equal(state.journal.find(item => item.id === savedJournal.id).content, '양액통 점검 완료');
   assert.equal(state.beds.find(bed => bed.id === bedId).varietyId, varietyId);
   assert.equal(state.beds.find(bed => bed.id === bedId).rackType, 'nursery1');
   assert.deepEqual(state.stageSettings.map(item => Number(item.days)), [6, 15, 24]);
@@ -196,6 +217,7 @@ try {
   const book = new ExcelJS.Workbook();
   await book.xlsx.readFile(file);
   assert.equal(book.getWorksheet('품종').getRow(2).getCell(4).value, 3100);
+  assert.equal(book.getWorksheet('업무일지').getRow(2).getCell(3).value, '현장 점검');
   await stop();
   const bedsSheet = book.getWorksheet('베드');
   bedsSheet.getRow(1).getCell(2).value = 'house';
@@ -212,6 +234,7 @@ try {
   tasksSheet.getRow(1).getCell(6).value = null;
   tasksSheet.eachRow((row, number) => { if (number > 1) row.getCell(6).value = null; });
   book.removeWorksheet('아카이브');
+  book.removeWorksheet('업무일지');
   book.removeWorksheet('재배단계');
   book.removeWorksheet('재배대단');
   await book.xlsx.writeFile(file);
@@ -224,6 +247,7 @@ try {
   assert.equal(state.harvests[0].bedKey, bedId);
   assert.equal(state.tasks.find(item => item.id === task.id).memo, '');
   assert.equal(state.archive.length, 2);
+  assert.deepEqual(state.journal, []);
   assert.deepEqual(state.stageSettings.map(item => Number(item.days)), [7, 14, 24]);
   assert.equal(state.rackTiers.length, 44 * 6);
   assert.equal(state.tasks.find(item => item.id === oneOff.id).dueDate, '2026-10-14');
@@ -237,6 +261,7 @@ try {
   assert.equal(migrated.getWorksheet('베드').getRow(1).getCell(6).value, 'rackType');
   assert.equal(migrated.getWorksheet('베드').getRow(1).getCell(7).value, 'tierCount');
   assert.equal(migrated.getWorksheet('작업일정').getRow(1).getCell(6).value, 'memo');
+  assert.equal(migrated.getWorksheet('업무일지').getRow(1).getCell(2).value, 'date');
   console.log('달력 작업 메모·엑셀 이관, 2층 구조·재배대 종류, 씨앗 재고, 반복 일정, 미계량 수확 확인 완료');
 } finally {
   await stop();
