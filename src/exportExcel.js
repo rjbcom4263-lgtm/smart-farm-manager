@@ -11,6 +11,7 @@ const sheets = {
   sales: ['판매', ['id', 'date', 'varietyId', 'boxes', 'weightKg', 'memo']],
   climate: ['온습도', ['id', 'date', 'temperature', 'humidity']],
   nutrients: ['양액', ['id', 'date']],
+  solution: ['양액측정', ['id', 'date', 'ph', 'ec']],
   co2: ['CO2교체', ['id', 'date', 'tankNumber']],
   beds: ['베드', ['id', 'floor', 'side', 'number', 'varietyId', 'rackType', 'tierCount']],
   stageSettings: ['재배단계', ['rackType', 'days']],

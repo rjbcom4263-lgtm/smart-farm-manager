@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { initialArchive, archiveValues } from './archive/defaults.js';
 import { journalValues } from './journal/values.js';
+import { solutionValues } from './solution/values.js';
 import { defaultTierCount, stages, stageDays, initialRackTiers, rackTierValues, tierCountFor } from './cultivation/stages.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,7 @@ const schemas = {
   sales: { sheet: '판매', columns: ['id', 'date', 'varietyId', 'boxes', 'weightKg', 'memo'] },
   climate: { sheet: '온습도', columns: ['id', 'date', 'temperature', 'humidity'] },
   nutrients: { sheet: '양액', columns: ['id', 'date'] },
+  solution: { sheet: '양액측정', columns: ['id', 'date', 'ph', 'ec'] },
   co2: { sheet: 'CO2교체', columns: ['id', 'date', 'tankNumber'] },
   beds: { sheet: '베드', columns: ['id', 'floor', 'side', 'number', 'varietyId', 'rackType', 'tierCount'] },
   stageSettings: { sheet: '재배단계', columns: ['rackType', 'days'] },
@@ -174,6 +176,10 @@ async function loadBook() {
     }
     if (!sheet(book, 'journal')) {
       book.addWorksheet(schemas.journal.sheet).addRow(schemas.journal.columns);
+      migrated = true;
+    }
+    if (!sheet(book, 'solution')) {
+      book.addWorksheet(schemas.solution.sheet).addRow(schemas.solution.columns);
       migrated = true;
     }
     if (!sheet(book, 'stageSettings')) {
@@ -352,6 +358,7 @@ post('climate', (book, body) => {
 });
 
 post('nutrients', (book, body) => add(book, 'nutrients', { date: day(body.date) }));
+post('solution', (book, body) => add(book, 'solution', solutionValues(body)));
 
 post('co2', (book, body) => {
   const tankNumber = count(body.tankNumber, '통 번호', { allowZero: false });
@@ -433,7 +440,7 @@ post('rack-tiers', (book, body) => {
 
 app.delete('/api/:type/:id', async (req, res, next) => {
   try {
-    const allowed = ['varieties', 'plans', 'harvests', 'sales', 'climate', 'nutrients', 'co2', 'sowings', 'tasks', 'archive', 'journal'];
+    const allowed = ['varieties', 'plans', 'harvests', 'sales', 'climate', 'nutrients', 'solution', 'co2', 'sowings', 'tasks', 'archive', 'journal'];
     if (!allowed.includes(req.params.type)) throw new Error('삭제할 수 없는 기록입니다.');
     res.json(await mutate(book => {
       if (req.params.type === 'varieties') {

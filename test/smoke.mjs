@@ -86,6 +86,7 @@ try {
   assert.equal(state.rackTiers[0].slotCount, '');
   assert.equal(state.archive.length, 2);
   assert.deepEqual(state.journal, []);
+  assert.deepEqual(state.solution, []);
   const entry = await request('journal', { date: '2026-10-14', title: '육묘대 점검', content: '1층 점검\n이상 없음' });
   await request(`journal/${entry.id}`, { date: '2026-10-15', title: '육묘대 점검', content: '2층도 점검' }, 'PATCH');
   state = await request('state', undefined, 'GET');
@@ -147,6 +148,14 @@ try {
   const cloudJournal = mutateState(cloudState, 'POST', ['journal'], { date: '2026-10-14', title: '작업', content: '필터 확인' });
   mutateState(cloudState, 'PATCH', ['journal', cloudJournal.id], { date: '2026-10-15', title: '작업', content: '필터 청소' });
   assert.equal(cloudState.journal[0].content, '필터 청소');
+  assert.deepEqual(cloudState.solution, []);
+  const cloudReading = mutateState(cloudState, 'POST', ['solution'], { date: '2026-10-15', ph: 5.8, ec: 1.45 });
+  assert.equal(cloudReading.ec, 1.45);
+  assert.throws(() => mutateState(cloudState, 'POST', ['solution'], { date: '2026-10-15', ph: '', ec: 1.5 }), /pH/);
+  assert.throws(() => mutateState(cloudState, 'POST', ['solution'], { date: '2026-10-15', ph: 5.8, ec: -1 }), /EC/);
+  mutateState(cloudState, 'DELETE', ['solution', cloudReading.id]);
+  delete cloudState.solution;
+  assert.deepEqual(snapshot(cloudState).solution, []);
   assert.throws(() => mutateState(cloudState, 'POST', ['journal'], { date: '2026-10-15', title: '빈 일지', content: '' }), /제목과 내용/);
   mutateState(cloudState, 'DELETE', ['journal', cloudJournal.id]);
   assert.deepEqual(cloudState.journal, []);
@@ -198,6 +207,9 @@ try {
   await request(`harvests/${harvest.id}`, { date: '2026-10-03', bedKey: state.beds[0].id, varietyId, boxes: 3, weightKg: 12.5, cullBoxes: 1, cullWeightKg: 1.2 }, 'PATCH');
   await request(`sowings/${sowing.id}`, undefined, 'DELETE');
   const savedJournal = await request('journal', { date: '2026-10-16', title: '현장 점검', content: '양액통 점검 완료' });
+  const reading = await request('solution', { date: '2026-10-16', ph: 5.8, ec: 1.45 });
+  const invalidReading = await fetch(`${base}/solution`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: '2026-10-16', ph: 5.8, ec: '' }) });
+  assert.equal(invalidReading.status, 400);
   state = await request('state', undefined, 'GET');
   assert.equal(state.varieties[0].stock, 3100);
 
@@ -208,6 +220,7 @@ try {
   assert.equal(state.harvests.length, 1);
   assert.equal(state.harvests[0].weightKg, 12.5);
   assert.equal(state.journal.find(item => item.id === savedJournal.id).content, '양액통 점검 완료');
+  assert.equal(state.solution.find(item => item.id === reading.id).ph, 5.8);
   assert.equal(state.beds.find(bed => bed.id === bedId).varietyId, varietyId);
   assert.equal(state.beds.find(bed => bed.id === bedId).rackType, 'nursery1');
   assert.deepEqual(state.stageSettings.map(item => Number(item.days)), [6, 15, 24]);
@@ -218,6 +231,7 @@ try {
   await book.xlsx.readFile(file);
   assert.equal(book.getWorksheet('품종').getRow(2).getCell(4).value, 3100);
   assert.equal(book.getWorksheet('업무일지').getRow(2).getCell(3).value, '현장 점검');
+  assert.equal(book.getWorksheet('양액측정').getRow(2).getCell(4).value, 1.45);
   await stop();
   const bedsSheet = book.getWorksheet('베드');
   bedsSheet.getRow(1).getCell(2).value = 'house';
@@ -235,6 +249,7 @@ try {
   tasksSheet.eachRow((row, number) => { if (number > 1) row.getCell(6).value = null; });
   book.removeWorksheet('아카이브');
   book.removeWorksheet('업무일지');
+  book.removeWorksheet('양액측정');
   book.removeWorksheet('재배단계');
   book.removeWorksheet('재배대단');
   await book.xlsx.writeFile(file);
@@ -248,6 +263,7 @@ try {
   assert.equal(state.tasks.find(item => item.id === task.id).memo, '');
   assert.equal(state.archive.length, 2);
   assert.deepEqual(state.journal, []);
+  assert.deepEqual(state.solution, []);
   assert.deepEqual(state.stageSettings.map(item => Number(item.days)), [7, 14, 24]);
   assert.equal(state.rackTiers.length, 44 * 6);
   assert.equal(state.tasks.find(item => item.id === oneOff.id).dueDate, '2026-10-14');
@@ -262,6 +278,7 @@ try {
   assert.equal(migrated.getWorksheet('베드').getRow(1).getCell(7).value, 'tierCount');
   assert.equal(migrated.getWorksheet('작업일정').getRow(1).getCell(6).value, 'memo');
   assert.equal(migrated.getWorksheet('업무일지').getRow(1).getCell(2).value, 'date');
+  assert.equal(migrated.getWorksheet('양액측정').getRow(1).getCell(3).value, 'ph');
   console.log('달력 작업 메모·엑셀 이관, 2층 구조·재배대 종류, 씨앗 재고, 반복 일정, 미계량 수확 확인 완료');
 } finally {
   await stop();
