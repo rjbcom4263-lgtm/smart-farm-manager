@@ -1,4 +1,5 @@
 import { readSensors } from './cloud/sensors.js';
+import { cloudApiProxy } from './cloud/local-proxy.js';
 import express from 'express';
 import ExcelJS from 'exceljs';
 import { randomUUID } from 'node:crypto';
@@ -249,6 +250,13 @@ app.get('/api/sensors', async (req, res) => {
   res.set('Cache-Control', 'no-store').json(await readSensors(process.env.SMART_FARM_SENSOR_URL || 'http://127.0.0.1:8091/api/latest'));
 });
 
+if (!process.env.SMART_FARM_DATA_FILE) {
+  app.use('/api', cloudApiProxy({
+    origin: 'https://smart-farm-greenlog.pages.dev',
+    passwordFile: path.join(root, 'data', 'cloudflare-admin-password.txt'),
+  }));
+}
+
 app.get('/api/state', async (req, res, next) => {
   try { res.json(snapshot(await loadBook())); } catch (error) { next(error); }
 });
@@ -474,6 +482,6 @@ if (process.argv.includes('--production')) {
   app.use(vite.middlewares);
 }
 
-await loadBook();
+if (process.env.SMART_FARM_DATA_FILE) await loadBook();
 const port = Number(process.env.PORT || 4173);
 app.listen(port, '127.0.0.1', () => console.log(`스마트팜 실행: http://localhost:${port}`));
